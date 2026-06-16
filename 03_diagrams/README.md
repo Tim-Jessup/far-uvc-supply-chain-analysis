@@ -14,13 +14,11 @@ The HTML loads `supply-chain-params.js` at runtime, so the two files must stay t
 ## Editing the numbers
 
 Every assumption sits in `supply-chain-params.js` — edit it there as firmer figures
-arrive (e.g. from Heraeus, Ushio). Nothing in the HTML needs to change; reload the page
-to see updates. The `id` keys in the params file must match the material node `id`s in
-the diagram.
+arrive. Nothing in the HTML needs to change; reload the page
+to see updates. The `id` keys in the params file must match the material node `id`s in the diagram.
 
 Conversion and wastage factors, with ranges and confidence flags, are documented in
-`../02_investigations/material-conversion-and-wastage-estimates.md`. The params file uses
-the central estimates from that document.
+`../02_investigations/material-conversion-and-wastage-estimates.md`. The params file uses the central estimates from that document.
 
 ## Viewing
 
