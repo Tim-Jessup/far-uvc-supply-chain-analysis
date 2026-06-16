@@ -5,6 +5,10 @@ An exploration of the supply chain of **222 nm KrCl excimer lamps** for air disi
 ## Investigation Approach
 
 
+## Interactive Diagram
+
+**[View the supply-chain tree →](https://tim-jessup.github.io/far-uvc-supply-chain-analysis/03_diagrams/supply-chain-tree.html)**
+
 ## Structure
 
 ```
