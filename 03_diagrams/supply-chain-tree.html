@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Far-UVC lamp — supply chain tree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,560&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  :root{
+    --bg:#FFFFFF; --panel:#FFFFFF; --ink:#2A2521; --muted:#8D8273;
+    --line:#D6D2CA;
+    --green:#2E8056; --amber:#D98A1E; --red:#C13B33;
+    --neutral:#8A8275; --product:#C0552E;
+    --accent:#3E6590;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:"Hanken Grotesk",system-ui,sans-serif;}
+  header{padding:16px 22px 10px;border-bottom:1px solid var(--line);background:var(--bg);}
+  h1{font-size:18px;margin:0 0 3px;font-weight:560;letter-spacing:.2px;
+    font-family:"Fraunces",Georgia,serif;color:var(--ink);}
+  .sub{font-size:12.5px;color:var(--muted);margin:0;}
+  .bar{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;
+    padding:10px 22px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted);}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;align-items:center;font-size:12.5px;color:var(--muted);}
+  .legend .item{display:flex;align-items:center;gap:7px;}
+  .swatch{width:12px;height:12px;border-radius:3px;display:inline-block;}
+  .hint{margin-left:auto;font-style:italic;opacity:.8}
+  .toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .toggle button{background:var(--panel);color:var(--muted);border:0;padding:7px 13px;
+    font-size:12.5px;cursor:pointer;font-weight:600;font-family:"Hanken Grotesk",system-ui,sans-serif;}
+  .toggle button.active{background:var(--accent);color:#fff;}
+  #sliderbox{display:flex;align-items:center;gap:10px;}
+  #sliderbox input[type=range]{width:230px;accent-color:var(--accent);}
+  #tval{color:var(--ink);font-weight:700;display:inline-block;min-width:7em;text-align:right;}
+  .gradbar{width:120px;height:12px;border-radius:3px;
+    background:linear-gradient(90deg,var(--green),var(--amber),var(--red));display:inline-block;}
+  #wrap{width:100%;height:calc(100vh - 132px);overflow:hidden;cursor:grab;}
+  #wrap:active{cursor:grabbing;}
+  svg{display:block;width:100%;height:100%;}
+  .link{fill:none;stroke:var(--line);stroke-width:1.5px;}
+  .node rect.card{stroke-width:1px;cursor:pointer;}
+  .node rect.spine{pointer-events:none;}
+  .node .title{font-size:13px;font-weight:600;fill:var(--ink);pointer-events:none;
+    font-family:"Hanken Grotesk",system-ui,sans-serif;}
+  .node .sublabel{font-size:11.5px;font-weight:400;fill:var(--ink);pointer-events:none;
+    font-family:"Hanken Grotesk",system-ui,sans-serif;}
+  .node .qty{font-size:10.5px;font-weight:500;pointer-events:none;
+    font-family:"Hanken Grotesk",system-ui,sans-serif;}
+  .node.collapsed rect.card{stroke-dasharray:3 3;}
+  .node.pending rect.card{stroke-dasharray:4 3;stroke:#7C7F9E;}
+  .badge{font-size:11px;font-weight:700;pointer-events:none;fill:var(--muted);}
+  #tip{position:fixed;max-width:330px;background:var(--panel);border:1px solid #E6E2DA;
+    border-radius:10px;padding:12px 13px;font-size:12.5px;line-height:1.5;color:var(--ink);
+    box-shadow:0 10px 30px rgba(0,0,0,.12);pointer-events:none;opacity:0;transition:opacity .12s;z-index:10;
+    font-family:"Hanken Grotesk",system-ui,sans-serif;}
+  #tip h3{margin:0 0 5px;font-size:13.5px;font-family:"Hanken Grotesk",system-ui,sans-serif;font-weight:700;}
+  #tip .t-qty{color:var(--muted);font-size:12px;margin:0 0 8px;}
+  #tip .t-sum{margin:0 0 9px;}
+  #tip .t-conf{margin:0;padding-top:8px;border-top:1px solid #E6E2DA;}
+  #tip .t-conf b{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+  .controls{position:fixed;right:16px;bottom:14px;display:flex;gap:8px;z-index:9;}
+  .controls button{background:var(--panel);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:7px 11px;font-size:12px;cursor:pointer;
+    font-family:"Hanken Grotesk",system-ui,sans-serif;}
+  .controls button:hover{border-color:var(--muted);}
+</style>
+</head>
+<body>
+<header>
+  <h1>KrCl excimer (222 nm) far-UVC lamp — supply chain tree</h1>
+  <p class="sub" id="sub">Raw materials flow right&nbsp;→&nbsp;left into the finished lamp. Hover a node for detail; click to collapse/expand a branch.</p>
+</header>
+<div class="bar">
+  <span class="toggle">
+    <button id="mode-sources" class="active">Sources &amp; quantities</button>
+    <button id="mode-lamps">Lamps buildable</button>
+  </span>
+
+  <span id="sliderbox" style="display:none">
+    <label>Target&nbsp;production: <b id="tval">10,000</b> lamps/yr</label>
+    <input id="slider" type="range" min="4" max="9" step="0.01" value="4">
+  </span>
+
+  <span class="legend" id="legend-sources">
+    <span class="item"><span class="swatch" style="background:var(--green)"></span>High confidence</span>
+    <span class="item"><span class="swatch" style="background:var(--amber)"></span>Medium</span>
+    <span class="item"><span class="swatch" style="background:var(--red)"></span>Low</span>
+    <span class="item"><span class="swatch" style="background:var(--neutral)"></span>Assembly (no figure)</span>
+    <span class="item"><span class="swatch" style="background:#7C7F9E"></span>Pending investigation</span>
+    <span class="item"><span class="swatch" style="background:var(--product)"></span>Finished product</span>
+  </span>
+
+  <span class="legend" id="legend-lamps" style="display:none">
+    <span class="item"><span class="gradbar"></span></span>
+    <span class="item">ample headroom&nbsp;→&nbsp;approaching limit&nbsp;→&nbsp;target exceeds supply</span>
+  </span>
+
+  <span class="hint">drag to pan · scroll to zoom</span>
+</div>
+<div id="wrap"><svg></svg></div>
+<div id="tip"></div>
+<div class="controls">
+  <button id="fit">Fit to screen</button>
+  <button id="expand">Expand all</button>
+</div>
+
+<script src="supply-chain-params.js"></script>
+<script>
+// ---- Data ------------------------------------------------------------------
+// conf: high | med | low | na (assembly stage) | product
+const DATA = {
+  name:"Far-UVC lamp", conf:"product",
+  qty:"~tens of thousands – 300,000 units/yr",
+  summary:"Sealed KrCl dielectric-barrier-discharge lamp emitting 222 nm far-UVC. The product all of the materials below feed into; the analysis boundary is full vertical manufacture from raw materials to a packaged, tested unit.",
+  conf_note:"Production rate is uncertain: ~3,000 lamps/month (≈36,000/yr) per informant M, versus market-report estimates of ~100,000–300,000 units/yr.",
+  children:[
+    { name:"Fused silica envelope", conf:"na", qty:"—",
+      summary:"The synthetic fused-silica tube body that contains the Kr/Cl₂ fill, formed from cut & annealed Suprasil-class tube. The glass supply chain feeding it is below.",
+      conf_note:"Assembly stage — no standalone production statistic; see the glass and precursor below.",
+      children:[
+        { name:"UV-grade synthetic fused silica", id:"fused_silica_envelope", conf:"low",
+          qty:"Suprasil-class UV tube ~50–200 t/yr · far-UVC envelopes ~15–22 t/yr",
+          summary:"Synthetic fused silica produced by a vertically integrated chain — SiCl₄ flame-hydrolysed to a soot preform, sintered to a ~200 ppm-OH ingot, then redrawn to tube — almost entirely within Heraeus (Germany) and the Shin-Etsu JV (Japan). Because one producer runs all those steps, the binding figure is finished Suprasil-class UV tube output.",
+          conf_note:"Low: no producer discloses UV-grade tonnage; the Suprasil-class tube estimate (~50–200 t/yr) is derived from market value with very wide uncertainty, and most quartz tube is lower-grade natural quartz.",
+          children:[
+            { name:"Ultra-high-purity SiCl₄", id:"sicl4_envelope", conf:"med",
+              qty:"~1.3 Mt/yr (≥6N optics grade is a sub-1% slice)",
+              summary:"Silicon tetrachloride, the primary precursor for synthetic fused silica via flame hydrolysis (SiCl₄ + 2H₂O → SiO₂ + 4HCl). Lamp envelopes need the 6N metals-grade fraction; Evonik and Tokuyama are the principal Western suppliers.",
+              conf_note:"Medium: the ~1.3 Mt figure comes from market-research reports with no visible methodology; a polysilicon-byproduct cross-check supports only a 1–2 Mt order of magnitude." }
+          ]}
+      ]},
+
+    { name:"Gas fill", conf:"na", qty:"—",
+      summary:"The Kr/Cl₂ mixture sealed into the envelope. Krypton is >95 % of the fill; chlorine is the halogen donor at 0.5–3 %.",
+      conf_note:"Assembly stage — no standalone production statistic; see the two gases below.",
+      children:[
+        { name:"Krypton", id:"krypton", conf:"med",
+          qty:"~120,000 m³/yr (~450 t)",
+          summary:"Noble gas present at 1.1 ppm of air, recovered only as a cryogenic air-separation coproduct (with xenon) and purified to ≥5N. The dominant fill gas; no substitute exists for the 222 nm KrCl* exciplex. Production is co-located with large steelmaking ASUs (China ~44 % of purification).",
+          conf_note:"Medium: derived in two steps from a single 2017 EU/DERA source (krypton ≈ ⅓ of pure neon); no government statistics track krypton and the figure predates the 2022 Ukraine supply shock." },
+        { name:"Chlorine", id:"chlorine", conf:"med",
+          qty:"~18 Mt/yr bulk · high-purity ~5,000–15,000 t/yr",
+          summary:"The halogen donor in the KrCl* excimer. Bulk Cl₂ is an enormous chlor-alkali commodity, but lamps need a small semiconductor-like high-purity (≥4N) slice. Cl₂ is a CWC Schedule-3 chemical, adding compliance lead time.",
+          conf_note:"Medium: bulk Cl₂ (~18 Mt) is solidly sourced, but the lamp-relevant high-purity sub-segment (~5–15 kt) is a weak bottom-up plant-capacity estimate." }
+      ]},
+
+    { name:"Bandpass filter", conf:"na", qty:"—",
+      summary:"The optical filter that trims lamp output to 222 ± ~10 nm and blocks the longer-wavelength tail that would be unsafe for skin and eyes. A UV-grade fused-silica window carrying an HfO₂/SiO₂ multilayer coating (~25–50 layers) deposited by IBS/IAD.",
+      conf_note:"Assembly stage — no standalone production statistic; see the substrate and coating materials below.",
+      children:[
+        { name:"Fused silica window (substrate)", id:"fused_silica_window", conf:"low",
+          qty:"~200–800 t/yr (UV-grade optical windows)",
+          summary:"Flat polished UV-grade synthetic fused-silica blank (~40–80 mm dia, 1–3 mm) that carries the dielectric coating — same glass family as the envelope but in window form, drawn from the same SiCl₄-based fused-silica supply. Main commercial driver is 193 nm semiconductor lithography.",
+          conf_note:"Low: no primary statistics; two market-value methods diverge (~120 t vs 100–500 t), giving a wide 200–800 t/yr best guess.",
+          children:[
+            { name:"Ultra-high-purity SiCl₄", id:"sicl4_window", conf:"med",
+              qty:"~1.3 Mt/yr (≥6N optics grade is a sub-1% slice)",
+              summary:"Silicon tetrachloride, the primary precursor for synthetic fused silica via flame hydrolysis (SiCl₄ + 2H₂O → SiO₂ + 4HCl). The window substrate uses the same 6N metals-grade fraction as the envelope; Evonik and Tokuyama are the principal Western suppliers.",
+              conf_note:"Medium: the ~1.3 Mt figure comes from market-research reports with no visible methodology; a polysilicon-byproduct cross-check supports only a 1–2 Mt order of magnitude." }
+          ]},
+        { name:"HfO₂ (high-index coating)", id:"hfo2", conf:"med",
+          qty:"~25–40 t/yr via oxide · ~3–10 t/yr optical-grade",
+          summary:"High-index layer (n≈2.35 at 222 nm) in the bandpass stack. All hafnium is a byproduct of nuclear-grade zirconium refining (Hf:Zr ≈ 1:40), structurally tying supply to Zr; refining is concentrated in France, the US, China and Russia. Sub-milligram per filter.",
+          conf_note:"Medium: total Hf (~90 t) converges across trackers, but the HfO₂ split and the optical-grade slice rest largely on one paywalled source; USGS declines to publish Hf production." },
+        { name:"SiO₂ (low-index coating)", id:"sio2", conf:"low",
+          qty:"hundreds–low thousands t/yr optical-grade · total SiO₂ ~5.7 Mt/yr",
+          summary:"Standard low-index partner to HfO₂, supplied as fused-silica evaporation granules or sputter targets. Consumption is sub-milligram per filter; no realistic substitute as the low-index UV layer.",
+          conf_note:"Low: bulk SiO₂ (~5.7 Mt) is well documented, but no source isolates the optical-coating grade — that slice is estimated only by elimination." }
+      ]},
+
+    { name:"Electrodes", conf:"na", qty:"—",
+      summary:"The mesh/foil electrodes that couple the drive field into the discharge.",
+      conf_note:"Assembly stage — no standalone production statistic; see the electrode metal below.",
+      children:[
+        { name:"Nickel (Ni200 / Ni201)", id:"nickel", conf:"high",
+          qty:"~3.7 Mt/yr mined · ~3.5 Mt/yr refined",
+          summary:"Ni200/Ni201 (≥99 % Ni) mesh or foil, formed and sealed into the lamp, resists the corrosive Cl₂/KrCl fill; aluminium foil is used in some external-electrode research designs. Mine supply is ~60 % Indonesia; Class-I refined nickel is the tighter sub-market.",
+          conf_note:"High: global nickel production is well-sourced (USGS, Nornickel); only the negligible lamp-electrode slice and the formed-electrode fabrication step are uncertain." }
+      ]},
+
+    { name:"HV driver / ballast", conf:"pending", qty:"Pending — not yet investigated",
+      summary:"The resonant high-voltage electronics that strike and sustain the discharge (HV transformer, switching parts, capacitors, connectors). The driver supply chain has not yet been investigated in enough depth to present figures, so this branch is held as pending.",
+      conf_note:"Pending — the driver / ballast and its sub-components have not yet been analysed. This branch is deliberately not expanded pending further work." },
+
+    { name:"Housing & heatsink", conf:"na", qty:"—",
+      summary:"The module housing, heatsink and mounting hardware that hold the optics and manage heat.",
+      conf_note:"Assembly stage — no standalone production statistic; the structural material is below.",
+      children:[
+        { name:"Aluminium alloy", id:"aluminium", conf:"high",
+          qty:"~115 Mt/yr total Al (72.8 Mt primary + 41.7 Mt secondary)",
+          summary:"6xxx extrusion and ADC12/A380 die-cast aluminium for housing, heatsink and mounting hardware (~150–600 g per module). A high-volume commodity with no supply-criticality designation; China is ~60 % of primary smelting.",
+          conf_note:"High: global aluminium production is authoritative (USGS MCS 2026); only the far-UVC-specific share is a first-principles estimate." }
+      ]}
+  ]
+};
+
+// ---- Params & mode ---------------------------------------------------------
+const PARAMS = (window.LAMP_PARAMS) || {slider:{min:1e4,max:1e9,start:1e4}, materials:{}};
+const MAT = PARAMS.materials || {};
+let MODE = "sources";                       // "sources" | "lamps"
+let TARGET = PARAMS.slider.start || 1e4;    // target lamps/yr
+
+// ---- Render ----------------------------------------------------------------
+const COLORS = {high:"#2E8056", med:"#D98A1E", low:"#C13B33", na:"#8A8275", product:"#C0552E", pending:"#7C7F9E"};
+const lampScale = d3.interpolateRgbBasis(["#2E8056","#D98A1E","#C13B33"]);
+const NW = 256, NH = 50;            // node box width / height
+const SPINE_W = 4;
+const TEXT_X = -NW/2 + 18;         // text indent clears the spine
+
+const svg = d3.select("svg");
+const g = svg.append("g");
+const gLink = g.append("g").attr("class","links");   // links layer (drawn first → behind)
+const gNode = g.append("g").attr("class","nodes");   // nodes layer (drawn after → in front)
+const tip = document.getElementById("tip");
+
+// Helper: any CSS colour → rgba string (handles hex and rgb() from d3 scales)
+const tint = (colorStr, a) => {
+  const c = d3.color(colorStr);
+  if (!c) return colorStr;
+  return `rgba(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)},${a})`;
+};
+// Opaque equivalent of tint(color, a) composited against white — use for filled rects
+// so child nodes can't bleed through during animation
+const solidTint = (colorStr, a) => {
+  const c = d3.color(colorStr);
+  if (!c) return colorStr;
+  const mix = v => Math.round(255 * (1 - a) + v * a);
+  return `rgb(${mix(c.r)},${mix(c.g)},${mix(c.b)})`;
+};
+
+const root = d3.hierarchy(DATA);
+root.x0 = 0; root.y0 = 0;
+let i = 0;
+const tree = d3.tree().nodeSize([NH + 22, NW + 70]);
+
+const zoom = d3.zoom().scaleExtent([0.25, 2.5]).on("zoom", e => g.attr("transform", e.transform));
+svg.call(zoom);
+
+// Custom link: right edge of source → left edge of target, cubic bezier
+function linkPath(d) {
+  const sx = d.source.y + NW/2, sy = d.source.x;
+  const tx = d.target.y - NW/2, ty = d.target.x;
+  const cx = (tx - sx) * 0.45;
+  return `M${sx},${sy} C${sx+cx},${sy} ${tx-cx},${ty} ${tx},${ty}`;
+}
+// Collapsed/enter animation: zero-length point at a given position
+function linkPoint(pos) {
+  return linkPath({source:{y:pos.y - NW/2, x:pos.x}, target:{y:pos.y - NW/2, x:pos.x}});
+}
+
+// ---- Lamps-buildable maths -------------------------------------------------
+function computeBuildable(d){
+  const kids = (d.children||[]).concat(d._children||[]);
+  if(kids.length){ d.buildable = Math.min.apply(null, kids.map(computeBuildable)); }
+  else { const m = MAT[d.data.id]; d.buildable = (m && m.perLamp>0) ? m.supply/m.perLamp : Infinity; }
+  return d.buildable;
+}
+function fmtSI(n){
+  if(!isFinite(n)) return "—";
+  if(n>=1e9) return +(n/1e9).toPrecision(3)/1+"B";
+  if(n>=1e6) return +(n/1e6).toPrecision(3)/1+"M";
+  if(n>=1e3) return +(n/1e3).toPrecision(3)/1+"k";
+  return Math.round(n).toString();
+}
+function getColor(d){
+  if(MODE==="sources") return COLORS[d.data.conf] || COLORS.na;
+  if(isFinite(d.buildable)) return lampScale(Math.max(0, Math.min(1, Math.log10(TARGET/d.buildable)+1)));
+  return COLORS.na;
+}
+function getLine2(d){
+  if(MODE==="sources") return (d.data.qty && d.data.qty!=="—") ? trim(d.data.qty,44) : "";
+  if(isFinite(d.buildable)) return fmtSI(d.buildable)+" lamps/yr";
+  return "";
+}
+function fmtSupply(v,unit){
+  if(unit==="$") return "$"+fmtSI(v);
+  return fmtSI(v)+" "+unit;
+}
+
+function update(source){
+  const nodes = root.descendants();
+  const links = root.links();
+  tree(root);
+  computeBuildable(root);
+
+  // links (behind)
+  const link = gLink.selectAll("path.link").data(links, d => d.target.id);
+  const linkEnter = link.enter().append("path").attr("class","link")
+      .attr("d", () => linkPoint({x:source.x0, y:source.y0}))
+      .attr("opacity", 0);
+  linkEnter.merge(link).transition().duration(350)
+      .attr("d", linkPath)
+      .attr("opacity", 1);
+  link.exit().transition().duration(350)
+      .attr("opacity", 0)
+      .attr("d", () => linkPoint({x:source.x, y:source.y}))
+      .remove();
+
+  // nodes (in front)
+  const node = gNode.selectAll("g.node").data(nodes, d => d.id || (d.id = ++i));
+  const nodeEnter = node.enter().append("g")
+      .attr("class","node")
+      .attr("transform", () => `translate(${source.y0},${source.x0})`)
+      .on("click", (e,d) => { if(d.children){d._children=d.children;d.children=null;}
+                              else if(d._children){d.children=d._children;d._children=null;}
+                              update(d); })
+      .on("mousemove", (e,d) => showTip(e,d))
+      .on("mouseleave", hideTip);
+
+  // Card rect (tinted fill, E6E2DA border)
+  nodeEnter.append("rect").attr("class","card")
+      .attr("width", NW).attr("height", NH)
+      .attr("x", -NW/2).attr("y", -NH/2)
+      .attr("rx", 10).attr("ry", 10)
+      .attr("fill", d => solidTint(getColor(d), 0.12))
+      .attr("stroke", "#E6E2DA");
+
+  // Spine rect (solid status colour, left edge)
+  nodeEnter.append("rect").attr("class","spine")
+      .attr("width", SPINE_W).attr("height", NH)
+      .attr("x", -NW/2).attr("y", -NH/2)
+      .attr("rx", 2).attr("ry", 2)
+      .attr("fill", d => getColor(d));
+
+  nodeEnter.append("text").attr("class","title")
+      .attr("x", TEXT_X).attr("y", -5)
+      .text(d => d.data.name);
+
+  nodeEnter.append("text").attr("class","qty")
+      .attr("x", TEXT_X).attr("y", 13)
+      .attr("fill", d => tint(getColor(d), 0.95))
+      .text(d => getLine2(d));
+
+  nodeEnter.append("text").attr("class","badge")
+      .attr("x", NW/2-15).attr("y", 4);
+
+  const nodeUpdate = nodeEnter.merge(node);
+  nodeUpdate.transition().duration(350)
+      .attr("transform", d => `translate(${d.y},${d.x})`);
+  nodeUpdate.attr("class", d => "node" + (d._children ? " collapsed":"") + (d.data.conf==="pending" ? " pending":""));
+  nodeUpdate.select("rect.card")
+      .attr("fill", d => solidTint(getColor(d), 0.12));
+  nodeUpdate.select("rect.spine")
+      .attr("fill", d => getColor(d));
+  nodeUpdate.select(".title").text(d => d.data.name);
+  nodeUpdate.select(".qty")
+      .attr("fill", d => tint(getColor(d), 0.95))
+      .text(d => getLine2(d));
+  nodeUpdate.select(".badge").text(d => d._children ? "▸" : (d.children ? "▾":""));
+
+  node.exit().transition().duration(350)
+      .attr("transform", () => `translate(${source.y},${source.x})`).remove();
+
+  nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+
+  // Deeper nodes earlier in DOM → parents painted last → parents always on top
+  gNode.selectAll("g.node").sort((a, b) => b.depth - a.depth);
+}
+
+function trim(s, n){ if(!s) return ""; return s.length>n ? s.slice(0,n-1)+"…" : s; }
+
+function showTip(e,d){
+  let html;
+  if(MODE==="sources"){
+    const c=d.data.conf;
+    const label={high:"High confidence",med:"Medium confidence",low:"Low confidence",na:"Assembly stage",pending:"Pending investigation",product:"Finished product"}[c];
+    const dot=`<span class="dot" style="background:${COLORS[c]}"></span>`;
+    html = `<h3>${d.data.name}</h3>`+
+      (d.data.qty && d.data.qty!=="—" ? `<p class="t-qty">Est. annual production: ${d.data.qty}</p>`:"")+
+      `<p class="t-sum">${d.data.summary}</p>`+
+      `<p class="t-conf"><b>${dot}${label}</b><br>${d.data.conf_note}</p>`;
+  } else {
+    const m=MAT[d.data.id];
+    const dot=`<span class="dot" style="background:${getColor(d)}"></span>`;
+    let body;
+    if(m){
+      body = `<p class="t-qty">Supply ${fmtSupply(m.supply,m.unit)}/yr · needs ${fmtSupply(m.perLamp,m.unit)}/lamp</p>`+
+             `<p class="t-sum">${m.note||d.data.summary}</p>`;
+    } else {
+      body = `<p class="t-qty">Assembly — limited by its scarcest input</p>`+
+             `<p class="t-sum">${d.data.summary}</p>`;
+    }
+    const ratio = TARGET/d.buildable;
+    const verdict = !isFinite(d.buildable) ? "no figure" :
+        ratio<=1 ? `target uses ${(ratio*100<0.1?"<0.1":(ratio*100).toPrecision(2))}% of buildable supply`
+                 : `target exceeds buildable supply by ${(ratio).toPrecision(2)}×`;
+    html = `<h3>${d.data.name}</h3>`+ body +
+      `<p class="t-conf"><b>${dot}${fmtSI(d.buildable)} lamps/yr buildable</b><br>`+
+      `At target ${Math.round(TARGET).toLocaleString()}/yr: ${verdict}.</p>`;
+  }
+  tip.innerHTML = html;
+  tip.style.opacity = 1;
+  const pad=14; let x=e.clientX+pad, y=e.clientY+pad;
+  const r=tip.getBoundingClientRect();
+  if(x+r.width>window.innerWidth) x=e.clientX-r.width-pad;
+  if(y+r.height>window.innerHeight) y=window.innerHeight-r.height-pad;
+  tip.style.left=x+"px"; tip.style.top=y+"px";
+}
+function hideTip(){ tip.style.opacity=0; }
+
+function fit(){
+  const b = g.node().getBBox();
+  const w = svg.node().clientWidth, h = svg.node().clientHeight;
+  const scale = Math.min(0.95, 0.92*Math.min(w/b.width, h/b.height));
+  const tx = (w - scale*(b.x*2+b.width))/2;
+  const ty = (h - scale*(b.y*2+b.height))/2;
+  svg.transition().duration(400).call(zoom.transform,
+    d3.zoomIdentity.translate(tx,ty).scale(scale));
+}
+
+function expandAll(){
+  root.each(d => { if(d._children){d.children=d._children;d._children=null;} });
+  update(root); setTimeout(fit,400);
+}
+
+// recolour / relabel existing nodes without re-laying-out the tree
+function paint(){
+  computeBuildable(root);
+  gNode.selectAll("g.node").each(function(d){
+    const sel=d3.select(this);
+    const c = getColor(d);
+    sel.select("rect.card").attr("fill", solidTint(c, 0.12));
+    sel.select("rect.spine").attr("fill", c);
+    sel.select(".qty").attr("fill", tint(c, 0.95)).text(getLine2(d));
+  });
+}
+
+// ---- Controls --------------------------------------------------------------
+const slider=document.getElementById("slider");
+const tval=document.getElementById("tval");
+slider.min=Math.log10(PARAMS.slider.min); slider.max=Math.log10(PARAMS.slider.max);
+slider.value=Math.log10(PARAMS.slider.start);
+
+function setMode(m){
+  MODE=m;
+  document.getElementById("mode-sources").classList.toggle("active",m==="sources");
+  document.getElementById("mode-lamps").classList.toggle("active",m==="lamps");
+  document.getElementById("sliderbox").style.display = m==="lamps"?"flex":"none";
+  document.getElementById("legend-sources").style.display = m==="sources"?"flex":"none";
+  document.getElementById("legend-lamps").style.display = m==="lamps"?"flex":"none";
+  document.getElementById("sub").textContent = m==="lamps"
+    ? "Each node shows how many lamps/yr its global material supply could build (assemblies & the lamp show their scarcest input). Slide the target — nodes redden as the target approaches and exceeds buildable supply."
+    : "Raw materials flow right → left into the finished lamp. Each material node shows its estimated global annual production, coloured by confidence. Hover for detail; click to collapse a branch.";
+  paint();
+}
+function onSlider(){
+  TARGET=Math.pow(10,+slider.value);
+  tval.textContent=Math.round(TARGET).toLocaleString();
+  paint();
+}
+slider.addEventListener("input",onSlider);
+document.getElementById("mode-sources").onclick=()=>setMode("sources");
+document.getElementById("mode-lamps").onclick=()=>setMode("lamps");
+
+update(root);
+onSlider();          // initialise TARGET + label
+setTimeout(fit, 60);
+document.getElementById("fit").onclick = fit;
+document.getElementById("expand").onclick = expandAll;
+window.addEventListener("resize", fit);
+</script>
+</body>
+</html>
