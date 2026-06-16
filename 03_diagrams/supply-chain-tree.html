@@ -121,7 +121,6 @@ const DATA = {
   children:[
     { name:"Fused silica envelope", conf:"na", qty:"—",
       summary:"The synthetic fused-silica tube body that contains the Kr/Cl₂ fill, formed from cut & annealed Suprasil-class tube. The glass supply chain feeding it is below.",
-      conf_note:"Assembly stage — no standalone production statistic; see the glass and precursor below.",
       children:[
         { name:"UV-grade synthetic fused silica", id:"fused_silica_envelope", conf:"low",
           qty:"Suprasil-class UV tube ~50–200 t/yr · far-UVC envelopes ~15–22 t/yr",
@@ -137,7 +136,6 @@ const DATA = {
 
     { name:"Gas fill", conf:"na", qty:"—",
       summary:"The Kr/Cl₂ mixture sealed into the envelope. Krypton is >95 % of the fill; chlorine is the halogen donor at 0.5–3 %.",
-      conf_note:"Assembly stage — no standalone production statistic; see the two gases below.",
       children:[
         { name:"Krypton", id:"krypton", conf:"med",
           qty:"~120,000 m³/yr (~450 t)",
@@ -151,7 +149,6 @@ const DATA = {
 
     { name:"Bandpass filter", conf:"na", qty:"—",
       summary:"The optical filter that trims lamp output to 222 ± ~10 nm and blocks the longer-wavelength tail that would be unsafe for skin and eyes. A UV-grade fused-silica window carrying an HfO₂/SiO₂ multilayer coating (~25–50 layers) deposited by IBS/IAD.",
-      conf_note:"Assembly stage — no standalone production statistic; see the substrate and coating materials below.",
       children:[
         { name:"Fused silica window (substrate)", id:"fused_silica_window", conf:"low",
           qty:"~200–800 t/yr (UV-grade optical windows)",
@@ -175,7 +172,6 @@ const DATA = {
 
     { name:"Electrodes", conf:"na", qty:"—",
       summary:"The mesh/foil electrodes that couple the drive field into the discharge.",
-      conf_note:"Assembly stage — no standalone production statistic; see the electrode metal below.",
       children:[
         { name:"Nickel (Ni200 / Ni201)", id:"nickel", conf:"high",
           qty:"~3.7 Mt/yr mined · ~3.5 Mt/yr refined",
@@ -189,7 +185,6 @@ const DATA = {
 
     { name:"Housing & heatsink", conf:"na", qty:"—",
       summary:"The module housing, heatsink and mounting hardware that hold the optics and manage heat.",
-      conf_note:"Assembly stage — no standalone production statistic; the structural material is below.",
       children:[
         { name:"Aluminium alloy", id:"aluminium", conf:"high",
           qty:"~115 Mt/yr total Al (72.8 Mt primary + 41.7 Mt secondary)",
@@ -373,7 +368,9 @@ function showTip(e,d){
     html = `<h3>${d.data.name}</h3>`+
       (d.data.qty && d.data.qty!=="—" ? `<p class="t-qty">Est. annual production: ${d.data.qty}</p>`:"")+
       `<p class="t-sum">${d.data.summary}</p>`+
-      `<p class="t-conf"><b>${dot}${label}</b><br>${d.data.conf_note}</p>`;
+      (d.data.conf_note
+        ? `<p class="t-conf"><b>${dot}${label}</b><br>${d.data.conf_note}</p>`
+        : `<p class="t-conf"><b>${dot}${label}</b></p>`);
   } else {
     const m=MAT[d.data.id];
     const dot=`<span class="dot" style="background:${getColor(d)}"></span>`;
