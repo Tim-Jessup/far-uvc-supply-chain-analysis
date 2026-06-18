@@ -251,8 +251,10 @@ function linkPoint(pos) {
 // ---- Lamps-buildable maths -------------------------------------------------
 function computeBuildable(d){
   const kids = (d.children||[]).concat(d._children||[]);
-  if(kids.length){ d.buildable = Math.min.apply(null, kids.map(computeBuildable)); }
-  else { const m = MAT[d.data.id]; d.buildable = (m && m.perLamp>0) ? m.supply/m.perLamp : Infinity; }
+  const m = MAT[d.data.id];
+  const own = (m && m.perLamp>0) ? m.supply/m.perLamp : Infinity;
+  if(kids.length){ d.buildable = Math.min(own, Math.min.apply(null, kids.map(computeBuildable))); }
+  else { d.buildable = own; }
   return d.buildable;
 }
 function fmtSI(n){
