@@ -91,8 +91,8 @@
     <span class="item"><span class="swatch" style="background:var(--amber)"></span>Medium</span>
     <span class="item"><span class="swatch" style="background:var(--red)"></span>Low</span>
     <span class="item"><span class="swatch" style="background:var(--neutral)"></span>Assembly (no figure)</span>
-    <span class="item"><span class="swatch" style="background:#7C7F9E"></span>Pending investigation</span>
-    <span class="item"><span class="swatch" style="background:var(--product)"></span>Finished product</span>
+    <!-- <span class="item"><span class="swatch" style="background:#7C7F9E"></span>Pending investigation</span>
+    <span class="item"><span class="swatch" style="background:var(--product)"></span>Finished product</span> -->
   </span>
 
   <span class="legend" id="legend-lamps" style="display:none">
@@ -114,10 +114,10 @@
 // ---- Data ------------------------------------------------------------------
 // conf: high | med | low | na (assembly stage) | product
 const DATA = {
-  name:"Far-UVC lamp", conf:"product",
-  qty:"~tens of thousands – 300,000 units/yr",
-  summary:"Sealed KrCl dielectric-barrier-discharge lamp emitting 222 nm far-UVC. The product all of the materials below feed into; the analysis boundary is full vertical manufacture from raw materials to a packaged, tested unit.",
-  conf_note:"Production rate is uncertain: ~3,000 lamps/month (≈36,000/yr) per informant M, versus market-report estimates of ~100,000–300,000 units/yr.",
+  name:"Far-UVC lamp", conf:"pending",
+  qty:"Pending — not yet investigated",
+  summary:"Sealed KrCl dielectric-barrier-discharge lamp emitting 222 nm far-UVC. The product all of the materials below feed into; This node includes assembly and testing by lamp manufacturers.",
+  conf_note:"Production rate is uncertain and under investigation. Market-report estimates range from ~100,000–300,000 units/yr; lower-end independent estimates suggest ~36,000 units/yr. No public primary source has been confirmed.",
   children:[
     { name:"Fused silica envelope", conf:"na", qty:"—",
       summary:"The synthetic fused-silica tube body that contains the Kr/Cl₂ fill, formed from cut & annealed Suprasil-class tube. The glass supply chain feeding it is below.",
@@ -181,7 +181,7 @@ const DATA = {
 
     { name:"HV driver / ballast", conf:"pending", qty:"Pending — not yet investigated",
       summary:"The resonant high-voltage electronics that strike and sustain the discharge (HV transformer, switching parts, capacitors, connectors). The driver supply chain has not yet been investigated in enough depth to present figures, so this branch is held as pending.",
-      conf_note:"Pending — the driver / ballast and its sub-components have not yet been analysed. This branch is deliberately not expanded pending further work." },
+      conf_note:"Pending — the driver / ballast and its sub-components have not yet been analysed." },
 
     { name:"Housing & heatsink", conf:"na", qty:"—",
       summary:"The module housing, heatsink and mounting hardware that hold the optics and manage heat.",
